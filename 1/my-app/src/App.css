@@ -1,0 +1,178 @@
+#root {
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+.game {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.topContainer {
+  position: relative;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.game__content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.3s;
+}
+.game__content__grid {
+  width: 80%;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto auto;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  transition: 0.3s;
+}
+.card-container {
+  perspective: 1000px;
+  width: 200px;
+  height: 300px;
+}
+.card {
+  display: flex;
+  transform-style: preserve-3d;
+  transition: 0.3s;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  border-radius: 10px;
+}
+
+.flipped {
+  transform: rotateY(180deg);
+}
+
+.side {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+
+.card_front {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: url("/src/assets/download.jpg");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+.card_back {
+  border-radius: 20px;
+  background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  transform: rotateY(180deg);
+}
+
+.reset-btn {
+  margin-bottom: 20px;
+}
+.start-btn {
+  width: 100%;
+  height: 80px;
+}
+.start-btn h2 {
+  margin: 0;
+}
+
+.reset-btn:hover {
+  background-color: rgb(16, 193, 206);
+}
+.completeScreen {
+  position: absolute;
+  top: 30%;
+}
+.completeScreenContents {
+  background-color: white;
+  font-weight: 500;
+  font-size: 20px;
+  padding: 50px;
+  border-radius: 20;
+}
+
+.timer {
+  display: flex;
+  background-color: black;
+  color: white;
+  width: 150px;
+  height: 80px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+  font-size: 20;
+  font-weight: 500;
+}
+
+.historyboard {
+  position: absolute;
+  bottom: -150px;
+  box-shadow: 1px 2px 5px 2px;
+  width: 80%;
+  height: 400px;
+  overflow-y: auto;
+  border-radius: 20px;
+}
+.historyboard li {
+  color: rgb(231, 229, 229);
+  background-color: #646cff;
+  padding: 10px 30px 10px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.historyboard ul {
+  padding: 0;
+}
+
+.difficulties {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.difficulties label {
+  margin: 20px;
+  display: flex;
+  justify-content: center;
+  width: 100px;
+  height: 60px;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Hide default radio button */
+.difficulties label input {
+  appearance: none;
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* Change label background when input is checked */
+.difficulties label input:checked + span {
+  border-radius: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: #646cff; /* Change this to your preferred color */
+  color: white;
+}
