@@ -1,0 +1,52 @@
+.chatZone {
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 15px;
+  border: 0.5px solid rgba(0, 0, 0, 0.405);
+  .navTop {
+    border-radius: 15px 15px 0px 0px;
+    border-bottom: 0.5px solid grey;
+    display: flex;
+    align-items: center;
+    padding-left: 25px;
+    h1 {
+      font-size: 40px;
+    }
+    .back-btn {
+      margin-right: 20px;
+      svg {
+        width: 30px;
+      }
+    }
+  }
+  .messager_body {
+    max-height: 500px;
+    overflow-y: auto;
+    .TextContent {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+
+      .aText {
+        overflow-wrap: anywhere;
+        padding: 10px 20px 10px 20px;
+        border-radius: 15px;
+        align-items: center;
+        min-height: 50px;
+        background-color: aqua;
+        margin: 0 20px 10px 20px;
+      }
+      .sender {
+        align-items: start;
+        margin-left: 25px;
+      }
+      span {
+        display: flex;
+        max-width: 150px;
+      }
+    }
+  }
+  .inputBox {
+    width: 90%;
+  }
+}
