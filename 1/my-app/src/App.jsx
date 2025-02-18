@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import "./App.css";
-import Card from "./components/card";
-import { useRef } from "react"; // Import useRef
+import Timer from "./components/Timer";
+import CardGrid from "./components/cardGrid";
 
 const difficultiesSetting = {
   easy: { time: 40, pairs: 2 },
@@ -36,19 +36,11 @@ function App() {
   const [difficulties, setdifficulties] = useState("easy");
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
-  const [timer, setTimer] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(
-    difficultiesSetting[difficulties].time
-  );
+  const timeLeftRef = useRef(difficultiesSetting[difficulties].time);
+  const [timeLeft, setTimeLeft] = useState(timeLeftRef.current);
   const [isStart, setStart] = useState(false);
   const [finish, setFinish] = useState(false);
   const [cards, setCards] = useState(() => generateCards("easy"));
-
-  const [activeCards, setActiveCards] = useState([]);
-  const [matchPairs, setMatchPairs] = useState([]);
-
-  const timeoutCalled = useRef(false); // Track if timeout was handled
-  const gameCompleted = useRef(false); // Track if game completion was handled
 
   useEffect(() => {
     setCards(generateCards(difficulties));
@@ -56,41 +48,29 @@ function App() {
     setFinish(false);
   }, [difficulties]);
 
-  function startTimer() {
-    clearInterval(timer);
-    const newTimer = setInterval(() => {
-      setTimeLeft((prevTimeLeft) => {
-        if (prevTimeLeft <= 1) {
-          clearInterval(newTimer);
-          handleTimeOut();
-          return 0;
-        }
-        return prevTimeLeft - 1;
-      });
-    }, 1000);
-    setTimer(newTimer);
-  }
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (timeLeft === 0 && isStart) {
+      handleTimeOut();
+    }
+  }, [timeLeft, isStart]);
 
   const handleTimeOut = () => {
-    if (timeoutCalled.current) return; // Prevent multiple calls
-    timeoutCalled.current = true; // Mark timeout as handled
+    if (finish) return; // Prevent multiple calls
 
     console.log("Timeout reached! Ending game...");
 
-    clearInterval(timer);
-    setTimer(null);
+    clearInterval(timerRef.current);
     setFinish(true);
     setStart(false);
     setTimeLeft(0);
 
-    setMoves((prevMoves) => {
-      const finalMoves = prevMoves;
-      setHistory((prevHistory) => [
-        ...prevHistory,
-        { movenumb: finalMoves, time: 0, stat: "Lost" },
-      ]);
-      return prevMoves; // Keep state consistent
-    });
+    const finalMoves = moves; // Store the moves count before resetting it
+    setHistory((prevHistory) => [
+      ...prevHistory,
+      { movenumb: finalMoves, time: 0, stat: "Lost" },
+    ]);
   };
 
   function formatTime(seconds) {
@@ -102,76 +82,42 @@ function App() {
     )}`;
   }
 
-  const handleCardClick = (id) => {
-    if (
-      activeCards.length === 2 ||
-      activeCards.includes(id) ||
-      matchPairs.includes(id)
-    )
-      return;
+  const memoizedCards = useMemo(
+    () => generateCards(difficulties),
+    [difficulties]
+  );
 
-    const newFlipped = [...activeCards, id];
-    setActiveCards(newFlipped);
+  const completeHandler = useCallback(
+    (finalMoves, currentTimeLeft) => {
+      if (finish) return; // Prevent multiple calls
 
-    if (newFlipped.length === 2) {
-      const [first, second] = newFlipped.map((cardId) =>
-        cards.find((card) => card.id === cardId)
-      );
-      setMoves((prev) => prev + 1);
-      console.log(moves);
-      if (first?.value === second?.value) {
-        const newMatchPairs = [...matchPairs, first.id, second.id];
-        setMatchPairs(newMatchPairs);
-        if (newMatchPairs.length === cards.length) {
-          completeHandler();
-        }
-      }
+      clearInterval(timerRef.current);
+      setFinish(true);
+      setStart(false);
 
-      setTimeout(() => setActiveCards([]), 600);
-    }
-  };
+      console.log("Game Completed!");
 
-  const completeHandler = () => {
-    if (gameCompleted.current) return;
-    gameCompleted.current = true; // Mark completion as handled
-
-    clearInterval(timer);
-    setFinish(true);
-    setStart(false);
-
-    console.log("Game Completed!");
-
-    setMoves((prevMoves) => {
-      const finalMoves = prevMoves;
       setHistory((prevHistory) => [
         ...prevHistory,
-        { movenumb: finalMoves, time: timeLeft, stat: "Win" },
+        { movenumb: finalMoves, time: currentTimeLeft, stat: "Win" },
       ]);
-      return prevMoves; // Keep state consistent
-    });
-  };
+    },
+    [finish]
+  );
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     console.log("Resetting game...");
 
-    clearInterval(timer);
-    setTimer(null);
+    clearInterval(timerRef.current);
 
-    const newCards = generateCards(difficulties); // Generate new cards
+    const newCards = generateCards(difficulties); // Generate new cards is not optimize create a shuffle function instead
     setCards(newCards);
 
     setMoves(0); // Reset move count
     setTimeLeft(difficultiesSetting[difficulties].time); // Reset time
-    setActiveCards([]);
-    setMatchPairs([]);
     setStart(true);
     setFinish(false);
-
-    timeoutCalled.current = false; // Reset timeout tracker
-    gameCompleted.current = false; // Reset game completion tracker
-
-    startTimer(); // Start fresh timer
-  };
+  }, [difficulties]);
 
   return (
     <div className="game">
@@ -239,16 +185,11 @@ function App() {
           transition: "0.3s",
         }}
       >
-        <div
-          className="timer"
-          style={{
-            opacity: isStart ? "1" : "0",
-            height: isStart ? "100%" : "0",
-            transition: "0.3s",
-          }}
-        >
-          {formatTime(timeLeft)}
-        </div>
+        <Timer
+          initialTime={difficultiesSetting[difficulties].time}
+          isStart={isStart}
+          onTimeout={handleTimeOut}
+        />
         <div className="points"></div>
       </div>
       <div
@@ -268,17 +209,12 @@ function App() {
               transition: "0.3s",
             }}
           >
-            {cards.map((card) => (
-              <Card
-                key={card.id}
-                id={card.id}
-                imgurl={card.imgurl}
-                choosen={
-                  activeCards.includes(card.id) || matchPairs.includes(card.id)
-                }
-                handleCardClick={handleCardClick}
-              />
-            ))}
+            <CardGrid
+              difficulties={difficulties}
+              memoizedCards={memoizedCards}
+              completeHandler={completeHandler}
+              timeLeft={timeLeft}
+            />
           </div>
         )}
       </div>
@@ -291,7 +227,7 @@ function App() {
         >
           <div className="completeScreenContents">
             <h1>Congratulation you outdone yourself</h1>
-            <h2> Done in {formatTime(timeLeft)}</h2>
+            <h2> Remaining Time: {formatTime(timeLeft)}</h2>
             <button onClick={resetGame} className="reset-btn">
               Restart Game
             </button>
@@ -320,22 +256,19 @@ function App() {
         style={{ display: !isStart ? "block" : "none" }}
       >
         <h2>History</h2>
-        {history > "0" ? (
+        {history.length > 0 ? (
           <ul>
             {history.map((entry, index) => (
               <li key={index}>
                 <h2>{index + 1}</h2>
                 <h2>Moves: {entry.movenumb}</h2>
                 <h2>Status: {entry.stat}</h2>
-
-                <h2>Done in: {entry.time}s</h2>
+                <h2>Remaining Time: {entry.time}s</h2>
               </li>
             ))}
           </ul>
         ) : (
-          <>
-            <h1>You havent even tried</h1>
-          </>
+          <h1>You haven't even tried</h1>
         )}
       </div>
     </div>

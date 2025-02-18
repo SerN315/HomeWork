@@ -5,7 +5,7 @@ import "../layouts/chatlayout.scss";
 
 const socket = io("http://localhost:3001");
 
-function Chat({ username, room, chatHistory }) {
+function Chat({ socket, username, room, chatHistory }) {
   const [message, setMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
   const [file, setFile] = useState(null);

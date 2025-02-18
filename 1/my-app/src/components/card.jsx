@@ -1,7 +1,6 @@
-import { useState } from "react";
-import "../App.css";
+import React from "react";
 
-function Card({ id, imgurl, choosen, handleCardClick }) {
+const Card = React.memo(({ id, imgurl, choosen, handleCardClick }) => {
   return (
     <div className="card-container" onClick={() => handleCardClick(id)}>
       <div className={`card ${choosen ? "flipped" : ""}`}>
@@ -13,6 +12,6 @@ function Card({ id, imgurl, choosen, handleCardClick }) {
       </div>
     </div>
   );
-}
+});
 
 export default Card;
