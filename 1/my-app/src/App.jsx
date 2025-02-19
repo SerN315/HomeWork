@@ -36,40 +36,29 @@ function App() {
   const [difficulties, setdifficulties] = useState("easy");
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
-  const timeLeftRef = useRef(difficultiesSetting[difficulties].time);
-  const [timeLeft, setTimeLeft] = useState(timeLeftRef.current);
+  const [timeLeft, setTimeLeft] = useState(difficultiesSetting[difficulties].time);
   const [isStart, setStart] = useState(false);
   const [finish, setFinish] = useState(false);
   const [cards, setCards] = useState(() => generateCards("easy"));
 
-  useEffect(() => {
-    setCards(generateCards(difficulties));
-    setTimeLeft(difficultiesSetting[difficulties].time);
-    setFinish(false);
-  }, [difficulties]);
+  const timeLeftRef = useRef(difficultiesSetting[difficulties].time); // ✅ Store time without causing re-renders
 
-  const timerRef = useRef(null);
+const handleTimeUpdate = (newTime) => {
+  timeLeftRef.current = newTime; // ✅ Update ref only, no re-renders
+};
 
-  useEffect(() => {
-    if (timeLeft === 0 && isStart) {
-      handleTimeOut();
-    }
-  }, [timeLeft, isStart]);
 
   const handleTimeOut = () => {
-    if (finish) return; // Prevent multiple calls
+    if (finish) return;
 
     console.log("Timeout reached! Ending game...");
-
-    clearInterval(timerRef.current);
     setFinish(true);
     setStart(false);
     setTimeLeft(0);
 
-    const finalMoves = moves; // Store the moves count before resetting it
     setHistory((prevHistory) => [
       ...prevHistory,
-      { movenumb: finalMoves, time: 0, stat: "Lost" },
+      { movenumb: moves, time: 0, stat: "Lost" },
     ]);
   };
 
@@ -86,38 +75,40 @@ function App() {
     () => generateCards(difficulties),
     [difficulties]
   );
-
-  const completeHandler = useCallback(
-    (finalMoves, currentTimeLeft) => {
-      if (finish) return; // Prevent multiple calls
-
-      clearInterval(timerRef.current);
-      setFinish(true);
-      setStart(false);
-
-      console.log("Game Completed!");
-
-      setHistory((prevHistory) => [
-        ...prevHistory,
-        { movenumb: finalMoves, time: currentTimeLeft, stat: "Win" },
-      ]);
-    },
-    [finish]
-  );
+  function completeHandler(finalMoves) {
+    if (finish) return;
+  
+    console.log("Game Completed!");
+    setFinish(true);
+    setStart(false);
+  
+    console.log("Final Time Left:", timeLeftRef.current); // ✅ Always latest value
+  
+    setHistory((prevHistory) => [
+      ...prevHistory,
+      { movenumb: finalMoves, time: timeLeftRef.current, stat: "Win" }, // ✅ Use ref for accuracy
+    ]);
+  }
+  
+  
 
   const resetGame = useCallback(() => {
     console.log("Resetting game...");
-
-    clearInterval(timerRef.current);
-
-    const newCards = generateCards(difficulties); // Generate new cards is not optimize create a shuffle function instead
+    const newCards = generateCards(difficulties);
     setCards(newCards);
-
-    setMoves(0); // Reset move count
-    setTimeLeft(difficultiesSetting[difficulties].time); // Reset time
+    setMoves(0);
+    setTimeLeft(difficultiesSetting[difficulties].time);
     setStart(true);
     setFinish(false);
   }, [difficulties]);
+
+  
+  useEffect(() => {
+    setCards(generateCards(difficulties));
+    setTimeLeft(difficultiesSetting[difficulties].time);
+    setFinish(false);
+  }, [difficulties]);
+
 
   return (
     <div className="game">
@@ -185,11 +176,8 @@ function App() {
           transition: "0.3s",
         }}
       >
-        <Timer
-          initialTime={difficultiesSetting[difficulties].time}
-          isStart={isStart}
-          onTimeout={handleTimeOut}
-        />
+<Timer initialTime={(difficultiesSetting[difficulties].time)} isStart={isStart} onTimeout={handleTimeOut} 
+         onTimeUpdate={handleTimeUpdate}/>
         <div className="points"></div>
       </div>
       <div
@@ -210,10 +198,8 @@ function App() {
             }}
           >
             <CardGrid
-              difficulties={difficulties}
               memoizedCards={memoizedCards}
-              completeHandler={completeHandler}
-              timeLeft={timeLeft}
+              onGameComplete={completeHandler}
             />
           </div>
         )}
@@ -227,7 +213,7 @@ function App() {
         >
           <div className="completeScreenContents">
             <h1>Congratulation you outdone yourself</h1>
-            <h2> Remaining Time: {formatTime(timeLeft)}</h2>
+            <h2> Remaining Time: {formatTime(timeLeftRef.current)}</h2>
             <button onClick={resetGame} className="reset-btn">
               Restart Game
             </button>

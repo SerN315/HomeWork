@@ -1,46 +1,42 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import Card from "./Card";
 
-const CardGrid = ({
-  difficulties,
-  memoizedCards,
-  completeHandler,
-  timeLeft,
-}) => {
-  const [activeCards, setActiveCards] = useState([]);
-  const [matchPairs, setMatchPairs] = useState([]);
+const CardGrid = ({ memoizedCards, onGameComplete }) => {
   const [moves, setMoves] = useState(0);
+  const [selectedCards, setSelectedCards] = useState([]); // ✅ Store up to 2 selected cards
+  const [matchedPairs, setMatchedPairs] = useState(new Set()); // ✅ Track matched pairs in state
 
   const handleCardClick = useCallback(
-    (id) => {
-      if (
-        activeCards.length === 2 ||
-        activeCards.includes(id) ||
-        matchPairs.includes(id)
-      )
-        return;
+    (id, value, flipCard) => {
+      if (selectedCards.length === 2 || matchedPairs.has(id)) return;
 
-      const newFlipped = [...activeCards, id];
-      setActiveCards(newFlipped);
+      const newSelection = [...selectedCards, { id, value, flipCard }];
+      setSelectedCards(newSelection);
+      flipCard(true); // ✅ Flip this card when clicked
 
-      if (newFlipped.length === 2) {
-        const cardMap = new Map(memoizedCards.map((card) => [card.id, card]));
-
-        const [first, second] = newFlipped.map((cardId) => cardMap.get(cardId));
+      if (newSelection.length === 2) {
         setMoves((prev) => prev + 1);
 
-        if (first?.value === second?.value) {
-          const newMatchPairs = [...matchPairs, first.id, second.id];
-          setMatchPairs(newMatchPairs);
-          if (newMatchPairs.length === memoizedCards.length) {
-            console.log("Game Completed! Time Left:", timeLeft);
-            completeHandler(moves + 1, timeLeft);
-          }
+        if (newSelection[0].value === newSelection[1].value) {
+          // ✅ It's a match!
+          setMatchedPairs(new Set([...matchedPairs, newSelection[0].id, newSelection[1].id]));
+          setSelectedCards([]);
+        } else {
+          // ❌ Not a match, flip back after 600ms
+          setTimeout(() => {
+            newSelection[0].flipCard(false);
+            newSelection[1].flipCard(false);
+            setSelectedCards([]);
+          }, 600);
         }
-        setTimeout(() => setActiveCards([]), 600);
+
+        // ✅ Check if game is complete
+        if (matchedPairs.size + 2 === memoizedCards.length) {
+          onGameComplete(moves + 1);
+        }
       }
     },
-    [activeCards, matchPairs, memoizedCards, moves, completeHandler, timeLeft]
+    [selectedCards, matchedPairs, moves, onGameComplete]
   );
 
   return (
@@ -50,9 +46,8 @@ const CardGrid = ({
           key={card.id}
           id={card.id}
           imgurl={card.imgurl}
-          choosen={
-            activeCards.includes(card.id) || matchPairs.includes(card.id)
-          }
+          value={card.value}
+          isMatched={matchedPairs.has(card.id)}
           handleCardClick={handleCardClick}
         />
       ))}
