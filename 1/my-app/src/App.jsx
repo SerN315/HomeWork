@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import "./App.css";
+import { io } from "socket.io-client";
 import Timer from "./components/Timer";
 import CardGrid from "./components/cardGrid";
+const socket = io("http://localhost:3001");
 
 const difficultiesSetting = {
   easy: { time: 40, pairs: 2 },
@@ -33,20 +35,42 @@ const generateCards = (difficulties) => {
 };
 
 function App() {
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem("userName") || ""; // Load from localStorage if available
+  });
+  const [isNameSet, setIsNameSet] = useState(
+    !!localStorage.getItem("userName")
+  ); // Check if name is already set
   const [difficulties, setdifficulties] = useState("easy");
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(difficultiesSetting[difficulties].time);
+  const [timeLeft, setTimeLeft] = useState(
+    difficultiesSetting[difficulties].time
+  );
   const [isStart, setStart] = useState(false);
   const [finish, setFinish] = useState(false);
   const [cards, setCards] = useState(() => generateCards("easy"));
 
-  const timeLeftRef = useRef(difficultiesSetting[difficulties].time); // ✅ Store time without causing re-renders
+  const timeLeftRef = useRef(difficultiesSetting[difficulties].time); //  Store time without causing re-renders
 
-const handleTimeUpdate = (newTime) => {
-  timeLeftRef.current = newTime; // ✅ Update ref only, no re-renders
-};
+  const handleTimeUpdate = (newTime) => {
+    timeLeftRef.current = newTime; //  Update ref only, no re-renders
+  };
 
+  useEffect(() => {
+    if (userName) {
+      socket.emit("load_history", userName);
+
+      socket.on("game_history", (history) => {
+        setHistory(history);
+        console.log("Game history loaded:", history);
+      });
+    }
+
+    return () => {
+      socket.off("game_history");
+    };
+  }, [userName]);
 
   const handleTimeOut = () => {
     if (finish) return;
@@ -56,10 +80,18 @@ const handleTimeUpdate = (newTime) => {
     setStart(false);
     setTimeLeft(0);
 
-    setHistory((prevHistory) => [
-      ...prevHistory,
-      { movenumb: moves, time: 0, stat: "Lost" },
-    ]);
+    const newHistory = { movenumb: moves, time: 0, stat: "Lost" };
+
+    setHistory((prevHistory) => [...prevHistory, newHistory]);
+
+    const gameData = {
+      userName,
+      moves,
+      time: 0,
+      stat: "Lost",
+    };
+
+    socket.emit("save_game", gameData);
   };
 
   function formatTime(seconds) {
@@ -71,26 +103,41 @@ const handleTimeUpdate = (newTime) => {
     )}`;
   }
 
+  const handleUserNameSubmit = (e) => {
+    e.preventDefault();
+
+    if (userName.trim()) {
+      localStorage.setItem("userName", userName); // Store in localStorage
+      setIsNameSet(true); // Hide input after setting name
+    }
+  };
+
   const memoizedCards = useMemo(
     () => generateCards(difficulties),
     [difficulties]
   );
   function completeHandler(finalMoves) {
     if (finish) return;
-  
+
     console.log("Game Completed!");
     setFinish(true);
     setStart(false);
-  
-    console.log("Final Time Left:", timeLeftRef.current); // ✅ Always latest value
-  
+
+    console.log("Final Time Left:", timeLeftRef.current); //  Always latest value
+
     setHistory((prevHistory) => [
       ...prevHistory,
-      { movenumb: finalMoves, time: timeLeftRef.current, stat: "Win" }, // ✅ Use ref for accuracy
+      { moves: finalMoves, time: timeLeftRef.current, stat: "Win" }, //  Use ref for accuracy
     ]);
+    const gameData = {
+      userName,
+      moves: finalMoves,
+      time: timeLeftRef.current,
+      stat: "Win",
+    };
+
+    socket.emit("save_game", gameData);
   }
-  
-  
 
   const resetGame = useCallback(() => {
     console.log("Resetting game...");
@@ -102,13 +149,21 @@ const handleTimeUpdate = (newTime) => {
     setFinish(false);
   }, [difficulties]);
 
-  
   useEffect(() => {
     setCards(generateCards(difficulties));
     setTimeLeft(difficultiesSetting[difficulties].time);
     setFinish(false);
   }, [difficulties]);
 
+  const backToStart = useCallback(() => {
+    console.log("Resetting game...");
+    setStart(false);
+    setFinish(false);
+  });
+
+  const handleDifficultyChange = (event) => {
+    setdifficulties(event.target.value);
+  };
 
   return (
     <div className="game">
@@ -123,6 +178,35 @@ const handleTimeUpdate = (newTime) => {
         >
           <h1>Meme Matcher</h1>
           <div>
+            <div
+              className="Uinfo"
+              style={{ display: isStart ? "none" : "block" }}
+            >
+              {!isNameSet ? (
+                <form onSubmit={handleUserNameSubmit}>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                  />
+                  <button type="submit">Save Name</button>
+                </form>
+              ) : (
+                <p>
+                  Welcome back, <strong>{userName}</strong>!
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  localStorage.removeItem("userName");
+                  setUserName("");
+                  setIsNameSet(false);
+                }}
+              >
+                Change Username
+              </button>
+            </div>
             <button
               onClick={resetGame}
               className="start-btn"
@@ -132,37 +216,24 @@ const handleTimeUpdate = (newTime) => {
             >
               <h2>Start</h2>
             </button>
-            <div className="difficulties">
-              <label>
-                <input
-                  type="radio"
-                  name="difficulties"
-                  value="easy"
-                  checked={difficulties === "easy"}
-                  onChange={() => setdifficulties("easy")}
-                />
-                <span>Easy</span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="difficulties"
-                  value="medium"
-                  checked={difficulties === "medium"}
-                  onChange={() => setdifficulties("medium")}
-                />
-                <span>Medium</span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="difficulties"
-                  value="hard"
-                  checked={difficulties === "hard"}
-                  onChange={() => setdifficulties("hard")}
-                />
-                <span>Hard</span>
-              </label>
+            <div
+              className="difficulties"
+              style={{
+                display: isStart ? "none" : "flex",
+              }}
+            >
+              {["easy", "medium", "hard"].map((level) => (
+                <label key={level}>
+                  <input
+                    type="radio"
+                    name="difficulties"
+                    value={level}
+                    checked={difficulties === level}
+                    onChange={handleDifficultyChange}
+                  />
+                  <span>{level.charAt(0).toUpperCase() + level.slice(1)}</span>
+                </label>
+              ))}
             </div>
           </div>
         </div>
@@ -176,8 +247,12 @@ const handleTimeUpdate = (newTime) => {
           transition: "0.3s",
         }}
       >
-<Timer initialTime={(difficultiesSetting[difficulties].time)} isStart={isStart} onTimeout={handleTimeOut} 
-         onTimeUpdate={handleTimeUpdate}/>
+        <Timer
+          initialTime={difficultiesSetting[difficulties].time}
+          isStart={isStart}
+          onTimeout={handleTimeOut}
+          onTimeUpdate={handleTimeUpdate}
+        />
         <div className="points"></div>
       </div>
       <div
@@ -217,6 +292,9 @@ const handleTimeUpdate = (newTime) => {
             <button onClick={resetGame} className="reset-btn">
               Restart Game
             </button>
+            <button onClick={backToStart} className="reset-btn">
+              Back To Start
+            </button>
           </div>
         </div>
       )}
@@ -247,7 +325,7 @@ const handleTimeUpdate = (newTime) => {
             {history.map((entry, index) => (
               <li key={index}>
                 <h2>{index + 1}</h2>
-                <h2>Moves: {entry.movenumb}</h2>
+                <h2>Moves: {entry.moves}</h2>
                 <h2>Status: {entry.stat}</h2>
                 <h2>Remaining Time: {entry.time}s</h2>
               </li>

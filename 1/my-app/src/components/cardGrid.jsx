@@ -3,8 +3,8 @@ import Card from "./Card";
 
 const CardGrid = ({ memoizedCards, onGameComplete }) => {
   const [moves, setMoves] = useState(0);
-  const [selectedCards, setSelectedCards] = useState([]); // ✅ Store up to 2 selected cards
-  const [matchedPairs, setMatchedPairs] = useState(new Set()); // ✅ Track matched pairs in state
+  const [selectedCards, setSelectedCards] = useState([]); //  Store up to 2 selected cards
+  const [matchedPairs, setMatchedPairs] = useState(new Set()); //  Track matched pairs in state
 
   const handleCardClick = useCallback(
     (id, value, flipCard) => {
@@ -12,17 +12,19 @@ const CardGrid = ({ memoizedCards, onGameComplete }) => {
 
       const newSelection = [...selectedCards, { id, value, flipCard }];
       setSelectedCards(newSelection);
-      flipCard(true); // ✅ Flip this card when clicked
+      flipCard(true); // Flip card when clicked
 
       if (newSelection.length === 2) {
         setMoves((prev) => prev + 1);
 
         if (newSelection[0].value === newSelection[1].value) {
-          // ✅ It's a match!
-          setMatchedPairs(new Set([...matchedPairs, newSelection[0].id, newSelection[1].id]));
+          //  It's a match!
+          setMatchedPairs(
+            new Set([...matchedPairs, newSelection[0].id, newSelection[1].id])
+          );
           setSelectedCards([]);
         } else {
-          // ❌ Not a match, flip back after 600ms
+          // Not a match, flip back after 600ms
           setTimeout(() => {
             newSelection[0].flipCard(false);
             newSelection[1].flipCard(false);
@@ -30,7 +32,7 @@ const CardGrid = ({ memoizedCards, onGameComplete }) => {
           }, 600);
         }
 
-        // ✅ Check if game is complete
+        //  Check if game is complete
         if (matchedPairs.size + 2 === memoizedCards.length) {
           onGameComplete(moves + 1);
         }

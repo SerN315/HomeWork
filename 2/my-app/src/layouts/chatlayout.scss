@@ -1,4 +1,6 @@
 .chatZone {
+  padding-bottom: 20px;
+  padding: 10px 10px 20px 10px;
   width: 100%;
   margin-top: 20px;
   border-radius: 15px;
@@ -54,5 +56,65 @@
   }
   .chatVideo {
     max-width: 450px;
+  }
+  .chatInputContainer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .chatInputContainer input {
+    margin: 0;
+    padding: 6px;
+  }
+  .chatInputContainer button {
+    border-radius: 200px;
+    background-color: rgba(128, 128, 128, 0.257);
+    height: 50px;
+  }
+  button svg {
+    width: 20px;
+    height: 20px;
+  }
+  .chatInputContainer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .chatInputContainer input {
+    margin: 0;
+    padding: 6px;
+  }
+  .chatInputContainer button {
+    border-radius: 200px;
+    background-color: rgba(128, 128, 128, 0.257);
+    height: 50px;
+  }
+  button svg {
+    width: 20px;
+    height: 20px;
+  }
+  .chatInputContainer {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 20px;
+    input {
+      margin: 0;
+      padding: 6px;
+    }
+    button {
+      border-radius: 200px;
+      background-color: rgba(128, 128, 128, 0.257);
+      height: 50px;
+
+      button svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
   }
 }
