@@ -85,6 +85,13 @@ function Chat({ username, room, chatHistory }) {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleFileUpload(); // Send message or file
+    }
+  };
+
   const handlePaste = (e) => {
     const items = e.clipboardData.items;
     for (const item of items) {
@@ -212,6 +219,7 @@ function Chat({ username, room, chatHistory }) {
           value={message}
           className="inputBox"
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
         />
         <button onClick={handleFileUpload}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">

@@ -8,9 +8,11 @@ function App() {
   const [username, setUsername] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [room, setRoom] = useState("");
+  const [rooms, setRooms] = useState([]); // Store room list
+
   useEffect(() => {
     const hasVisited = localStorage.getItem("username");
-
+    socket.emit("recent_rooms", JSON.parse(localStorage.getItem("rooms")));
     if (!hasVisited) {
       const enteredUsername = prompt(
         "Welcome to our app!",
@@ -24,10 +26,23 @@ function App() {
       setUsername(hasVisited);
     }
   }, []);
+
+  const handleRoomData = (data) => {
+    console.log(data);
+    setRooms(data);
+  };
   const joinRoom = () => {
     if (username !== "" && room !== "") {
       socket.emit("join_room", room);
+      // Get the current list of rooms from local storage
+      const storedRooms = JSON.parse(localStorage.getItem("rooms")) || [];
 
+      // Check if the room is already in the list
+      if (!storedRooms.includes(room)) {
+        // Add the new room to the list and update local storage
+        const updatedRooms = [...storedRooms, room];
+        localStorage.setItem("rooms", JSON.stringify(updatedRooms));
+      }
       socket.on("chat_history", (history) => {
         setChatHistory(history); // Store history when received
       });
@@ -35,6 +50,7 @@ function App() {
   };
 
   useEffect(() => {
+    socket.on("valid_rooms", handleRoomData);
     return () => {
       socket.off("chat_history"); // Clean up listener
     };
@@ -56,6 +72,23 @@ function App() {
           <button onClick={joinRoom} className="join_btn">
             Join a Room
           </button>
+          <div className="room_list">
+            <h3>Recent Rooms</h3>
+            <ul>
+              {rooms.map((room) => (
+                <li
+                  className="room"
+                  key={room}
+                  onClick={() => {
+                    setRoom(room);
+                    joinRoom();
+                  }}
+                >
+                  {room}
+                </li>
+              ))}
+            </ul>
+          </div>
           {room && (
             <Chat
               socket={socket}
