@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 
-const Timer = ({ initialTime, isStart, onTimeout, onTimeUpdate }) => {
+const Timer = ({ initialTime, isStart, onTimeout, onTimeUpdate, finish }) => {
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const timerRef = useRef(null);
   const lastTimeLeftRef = useRef(initialTime); //  Store time without triggering re-renders
@@ -18,7 +18,9 @@ const Timer = ({ initialTime, isStart, onTimeout, onTimeUpdate }) => {
           if (prevTime <= 1) {
             clearInterval(timerRef.current);
             onTimeUpdate(0); //  Ensure last update before stopping
-            onTimeout();
+            if (!finish) {
+              onTimeout();
+            }
             return 0;
           }
           const updatedTime = prevTime - 1;
@@ -32,7 +34,7 @@ const Timer = ({ initialTime, isStart, onTimeout, onTimeUpdate }) => {
     }
 
     return () => clearInterval(timerRef.current);
-  }, [isStart]);
+  }, [isStart, finish]);
 
   return (
     <div className="timer" style={{ display: isStart ? "flex" : "none " }}>

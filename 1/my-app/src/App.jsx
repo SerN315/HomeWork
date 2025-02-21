@@ -4,6 +4,7 @@ import { io } from "socket.io-client";
 import Timer from "./components/Timer";
 import CardGrid from "./components/cardGrid";
 const socket = io("http://localhost:3001");
+import { fetchCardsFromDB } from "./features/pullCards";
 
 const difficultiesSetting = {
   easy: { time: 40, pairs: 2 },
@@ -11,27 +12,21 @@ const difficultiesSetting = {
   hard: { time: 10, pairs: 6 },
 };
 
-const Cards = [
-  { value: "1", imgurl: "/sasuke.png" },
-  { value: "2", imgurl: "/meme1.jpg" },
-  { value: "3", imgurl: "/meme2.jpg" },
-  { value: "4", imgurl: "/meme3.jpg" },
-  { value: "5", imgurl: "/meme4.jpg" },
-  { value: "6", imgurl: "/vite.svg" },
-];
+const generateCards = (allCards, difficulty) => {
+  if (!allCards.length) return [];
 
-const generateCards = (difficulties) => {
-  const { pairs } = difficultiesSetting[difficulties];
+  const { pairs } = difficultiesSetting[difficulty];
 
-  const selectedCards = Cards.slice(0, pairs);
+  // Select required number of pairs
+  const selectedCards = allCards.slice(0, pairs);
 
+  // Duplicate and assign unique IDs
   const pairedCards = selectedCards.flatMap((card, index) => [
     { ...card, id: index * 2 },
     { ...card, id: index * 2 + 1 },
   ]);
 
-  // Shuffle and return
-  return pairedCards.sort(() => Math.random() - 0.5);
+  return pairedCards.sort(() => Math.random() - 0.5); // Shuffle
 };
 
 function App() {
@@ -40,21 +35,24 @@ function App() {
   });
   const [isNameSet, setIsNameSet] = useState(
     !!localStorage.getItem("userName")
-  ); // Check if name is already set
-  const [difficulties, setdifficulties] = useState("easy");
+  );
+  const [difficulties, setDifficulties] = useState("easy");
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
   const [timeLeft, setTimeLeft] = useState(
     difficultiesSetting[difficulties].time
   );
+  const getMoves = () => movesRef.current; // access latest moves
   const [isStart, setStart] = useState(false);
   const [finish, setFinish] = useState(false);
-  const [cards, setCards] = useState(() => generateCards("easy"));
+  const [allCards, setAllCards] = useState([]); // Store fetched cards
+  const [cards, setCards] = useState([]); // Store generated cards
 
-  const timeLeftRef = useRef(difficultiesSetting[difficulties].time); //  Store time without causing re-renders
+  const timeLeftRef = useRef(difficultiesSetting[difficulties].time);
+  const movesRef = useRef(0);
 
-  const handleTimeUpdate = (newTime) => {
-    timeLeftRef.current = newTime; //  Update ref only, no re-renders
+  const incrementMoves = () => {
+    movesRef.current += 1;
   };
 
   useEffect(() => {
@@ -65,12 +63,37 @@ function App() {
         setHistory(history);
         console.log("Game history loaded:", history);
       });
-    }
 
-    return () => {
-      socket.off("game_history");
-    };
+      return () => {
+        socket.off("game_history");
+      };
+    }
   }, [userName]);
+
+  //Fetch cards once and store in `allCards`
+  useEffect(() => {
+    const loadCards = async () => {
+      try {
+        const fetchedCards = await fetchCardsFromDB();
+        setAllCards(fetchedCards);
+      } catch (error) {
+        console.error("Error fetching cards:", error);
+      }
+    };
+
+    loadCards();
+  }, []);
+
+  // Generate cards when difficulty changes (and `allCards` is available)
+  useEffect(() => {
+    if (allCards.length > 0) {
+      setCards(generateCards(allCards, difficulties));
+    }
+  }, [allCards, difficulties]);
+
+  const handleTimeUpdate = (newTime) => {
+    timeLeftRef.current = newTime;
+  };
 
   const handleTimeOut = () => {
     if (finish) return;
@@ -80,8 +103,7 @@ function App() {
     setStart(false);
     setTimeLeft(0);
 
-    const newHistory = { movenumb: moves, time: 0, stat: "Lost" };
-
+    const newHistory = { moves: movesRef.current, time: 0, stat: "Lost" };
     setHistory((prevHistory) => [...prevHistory, newHistory]);
 
     const gameData = {
@@ -105,17 +127,18 @@ function App() {
 
   const handleUserNameSubmit = (e) => {
     e.preventDefault();
-
     if (userName.trim()) {
-      localStorage.setItem("userName", userName); // Store in localStorage
-      setIsNameSet(true); // Hide input after setting name
+      localStorage.setItem("userName", userName);
+      setIsNameSet(true);
     }
   };
 
+  //Memoize card generation based on difficulty
   const memoizedCards = useMemo(
-    () => generateCards(difficulties),
-    [difficulties]
+    () => generateCards(allCards, difficulties),
+    [allCards, difficulties]
   );
+
   function completeHandler(finalMoves) {
     if (finish) return;
 
@@ -123,12 +146,13 @@ function App() {
     setFinish(true);
     setStart(false);
 
-    console.log("Final Time Left:", timeLeftRef.current); //  Always latest value
+    console.log("Final Time Left:", timeLeftRef.current);
 
     setHistory((prevHistory) => [
       ...prevHistory,
-      { moves: finalMoves, time: timeLeftRef.current, stat: "Win" }, //  Use ref for accuracy
+      { moves: finalMoves, time: timeLeftRef.current, stat: "Win" },
     ]);
+
     const gameData = {
       userName,
       moves: finalMoves,
@@ -140,29 +164,23 @@ function App() {
   }
 
   const resetGame = useCallback(() => {
+    if (allCards.length === 0) return;
     console.log("Resetting game...");
-    const newCards = generateCards(difficulties);
-    setCards(newCards);
+    setCards(generateCards(allCards, difficulties));
     setMoves(0);
     setTimeLeft(difficultiesSetting[difficulties].time);
     setStart(true);
     setFinish(false);
-  }, [difficulties]);
-
-  useEffect(() => {
-    setCards(generateCards(difficulties));
-    setTimeLeft(difficultiesSetting[difficulties].time);
-    setFinish(false);
-  }, [difficulties]);
+  }, [allCards, difficulties]);
 
   const backToStart = useCallback(() => {
     console.log("Resetting game...");
     setStart(false);
     setFinish(false);
-  });
+  }, []);
 
   const handleDifficultyChange = (event) => {
-    setdifficulties(event.target.value);
+    setDifficulties(event.target.value);
   };
 
   return (
@@ -252,6 +270,7 @@ function App() {
           isStart={isStart}
           onTimeout={handleTimeOut}
           onTimeUpdate={handleTimeUpdate}
+          finish={finish}
         />
         <div className="points"></div>
       </div>
@@ -275,6 +294,8 @@ function App() {
             <CardGrid
               memoizedCards={memoizedCards}
               onGameComplete={completeHandler}
+              incrementMoves={incrementMoves}
+              getMoves={getMoves}
             />
           </div>
         )}
