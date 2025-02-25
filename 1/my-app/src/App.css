@@ -185,3 +185,24 @@
   margin-right: 5px;
   border-radius: 10px;
 }
+
+.user_list_container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background-color: #646cff;
+}
+.user_list {
+  padding: 0;
+  list-style: none;
+  width: 80%;
+  background-color: aqua;
+}
+.user_list li {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70px;
+  font-size: 30px;
+}

@@ -24,6 +24,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+const rooms = {}; // Ensures rooms is always an object
 
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
@@ -46,8 +47,51 @@ io.on("connection", (socket) => {
       console.error("Error saving game history:", error);
     }
   });
+  // Create or Join a Room
+  socket.on("join_room", ({ roomId, userName }) => {
+    if (!rooms[roomId]) {
+      rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id };
+    }
 
-  // Fetch game history when user loads the page
+    rooms[roomId].players.push({ id: socket.id, userName, finishTime: null });
+    socket.join(roomId);
+    // Send userId back to the frontend
+    socket.emit("user_data", { userId: socket.id });
+
+    io.to(roomId).emit("room_update", {
+      players: rooms[roomId].players,
+      hostId: rooms[roomId].hostId,
+    });
+  });
+
+  // Start the Game (Only Host Can Start)
+  socket.on("start_game", (roomId) => {
+    if (rooms[roomId] && rooms[roomId].hostId === socket.id) {
+      rooms[roomId].gameStarted = true;
+      io.to(roomId).emit("game_started");
+    }
+  });
+
+  // Player Finishes the Game
+  socket.on("player_finished", ({ roomId, userName, finishTime }) => {
+    const room = rooms[roomId];
+    if (room) {
+      const player = room.players.find((p) => p.userName === userName);
+      if (player) {
+        player.finishTime = finishTime;
+      }
+
+      // Check if all players are done
+      if (room.players.every((p) => p.finishTime !== null)) {
+        const rankings = [...room.players].sort(
+          (a, b) => a.finishTime - b.finishTime
+        );
+        io.to(roomId).emit("game_over", rankings);
+      }
+    }
+  });
+
+  // Fetch Game History
   socket.on("load_history", async (userName) => {
     try {
       const history = await fetchGameHistory(userName);
@@ -57,25 +101,96 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Leave Room
+  socket.on("leave_room", ({ roomId, userName }) => {
+    if (!rooms[roomId]) return;
+
+    const room = rooms[roomId];
+    room.players = room.players.filter((p) => p.id !== socket.id);
+
+    // If the host leaves, assign a new host
+    if (room.hostId === socket.id && room.players.length > 0) {
+      room.hostId = room.players[0].id;
+      io.to(roomId).emit("new_host", room.players[0].userName);
+    }
+
+    // Notify remaining players
+    io.to(roomId).emit("room_update", {
+      players: room.players,
+      hostId: room.hostId,
+    });
+
+    // Delete room if empty
+    if (room.players.length === 0) {
+      delete rooms[roomId];
+    }
+
+    console.log(`${userName} left room ${roomId}`);
+  });
+
+  // Handle Disconnection
   socket.on("disconnect", () => {
-    console.log(`User ${socket.id} disconnected`);
+    let roomIdToRemove = null;
+    let removedPlayer = null;
+
+    for (let roomId in rooms) {
+      const room = rooms[roomId];
+
+      // Find and remove the player
+      const playerIndex = room.players.findIndex((p) => p.id === socket.id);
+      if (playerIndex !== -1) {
+        removedPlayer = room.players.splice(playerIndex, 1)[0];
+
+        io.to(roomId).emit("player_disconnected", socket.id);
+      }
+
+      // Assign a new host if the host disconnects
+      if (room.hostId === socket.id && room.players.length > 0) {
+        room.hostId = room.players[0].id;
+        io.to(roomId).emit("new_host", room.players[0].userName);
+      }
+
+      io.to(roomId).emit("room_update", {
+        players: room.players,
+        hostId: room.hostId,
+      });
+
+      // Mark room for deletion if empty
+      if (room.players.length === 0) {
+        roomIdToRemove = roomId;
+      }
+    }
+
+    // Delete empty room
+    if (roomIdToRemove) {
+      delete rooms[roomIdToRemove];
+    }
+
+    if (removedPlayer) {
+      console.log(
+        `User ${removedPlayer.userName} disconnected from room ${roomIdToRemove}.`
+      );
+    } else {
+      console.log(`User ${socket.id} disconnected.`);
+    }
   });
 });
 
-const fetchGameHistory = async (userName) => {
+const fetchGameHistory = async (userName, limit = 10) => {
   try {
     const querySnapshot = await db
       .collection("gameHistory")
       .where("userName", "==", userName)
       .orderBy("timestamp", "desc")
+      .limit(limit)
       .get();
-
     return querySnapshot.docs.map((doc) => doc.data());
   } catch (error) {
     console.error("Error fetching game history:", error);
     return [];
   }
 };
+
 server.listen(3001, () => {
   console.log("Server listening on port 3001");
 });
