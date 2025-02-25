@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import Timer from "../components/Timer";
-import CardGrid from "../components/CardGrid";
+import Timer from "../components/timer";
+import CardGrid from "../components/cardGrid";
 import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { fetchCardsFromDB } from "../features/pullCards";
@@ -86,6 +86,8 @@ function MultiplayerGame() {
   const startGame = () => {
     if (userId === hostId) {
       socket.emit("start_game", roomId);
+      setGameStarted(true);
+      startNewGame();
     }
   };
 

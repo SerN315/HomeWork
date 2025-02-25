@@ -176,13 +176,12 @@ io.on("connection", (socket) => {
   });
 });
 
-const fetchGameHistory = async (userName, limit = 10) => {
+const fetchGameHistory = async (userName) => {
   try {
     const querySnapshot = await db
       .collection("gameHistory")
       .where("userName", "==", userName)
       .orderBy("timestamp", "desc")
-      .limit(limit)
       .get();
     return querySnapshot.docs.map((doc) => doc.data());
   } catch (error) {

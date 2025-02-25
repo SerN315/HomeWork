@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { formatTime } from "../utils/formattime";
 
 const Timer = ({ initialTime, isStart, onTimeout, onTimeUpdate, finish }) => {
   const [timeLeft, setTimeLeft] = useState(initialTime);
@@ -42,11 +43,5 @@ const Timer = ({ initialTime, isStart, onTimeout, onTimeUpdate, finish }) => {
     </div>
   );
 };
-
-function formatTime(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-}
 
 export default Timer;

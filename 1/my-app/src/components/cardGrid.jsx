@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import Card from "./Card";
+import Card from "./card";
 
 const CardGrid = ({
   memoizedCards,
