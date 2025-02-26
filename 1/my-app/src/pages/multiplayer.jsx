@@ -4,28 +4,18 @@ import CardGrid from "../components/cardGrid";
 import { io } from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import { fetchCardsFromDB } from "../features/pullCards";
+import GameContent from "../components/gameLogic";
+import GameHistory from "../components/history";
+import RankingBoard from "../components/Ranking";
+import Difficulties from "../components/Difficulites";
+import { generateCards } from "../utils/gameUltis";
+import "../App.css";
 
 const socket = io("http://localhost:3001");
 
-const difficultiesSetting = {
-  easy: { time: 40, pairs: 2 },
-  medium: { time: 20, pairs: 4 },
-  hard: { time: 10, pairs: 6 },
-};
-
-const generateCards = (allCards, difficulty) => {
-  if (!allCards.length) return [];
-  const { pairs } = difficultiesSetting[difficulty];
-  const selectedCards = allCards.slice(0, pairs);
-  const pairedCards = selectedCards.flatMap((card, index) => [
-    { ...card, id: index * 2 },
-    { ...card, id: index * 2 + 1 },
-  ]);
-  return pairedCards.sort(() => Math.random() - 0.5);
-};
-
 function MultiplayerGame() {
   const navigate = useNavigate();
+  const [difficulties, setDifficulties] = useState("easy");
   const [userId, setUserId] = useState(null);
   const [roomId, setRoomId] = useState("");
   const [userName, setUserName] = useState(
@@ -35,26 +25,49 @@ function MultiplayerGame() {
   const [isInRoom, setIsInRoom] = useState(false);
   const [hostId, setHostId] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
-  const [cards, setCards] = useState([]);
   const [allCards, setAllCards] = useState([]);
-  const [timeLeft, setTimeLeft] = useState(40);
-  const timeLeftRef = useRef(40);
+  const [rankings, setRankings] = useState([]);
+  const [allFinished, setAllFinished] = useState(false);
+  const [finish, setFinish] = useState(false);
+  const [history, setHistory] = useState([]); // ✅ Track game history
+
+  useEffect(() => {
+    socket.on("update_rankings", (rankedPlayers) => {
+      console.log("📊 Rankings updated:", rankedPlayers);
+      setRankings(rankedPlayers);
+    });
+
+    socket.on("game_over", (finalRankings) => {
+      setRankings(finalRankings);
+      setAllFinished(true);
+    });
+
+    return () => {
+      socket.off("update_rankings");
+      socket.off("game_over");
+    };
+  }, []);
 
   useEffect(() => {
     socket.on("room_update", ({ players = [], hostId }) => {
       setPlayers(players);
       setHostId(hostId);
     });
-    socket.on("game_started", () => {
+
+    socket.on("game_started", (difficulties) => {
+      setDifficulties(difficulties); // ✅ Sync difficulty
       setGameStarted(true);
       startNewGame();
     });
+
     socket.on("user_data", ({ userId }) => {
       setUserId(userId);
     });
+
     socket.on("player_disconnected", (disconnectedPlayerId) => {
       setPlayers((prev) => prev.filter((p) => p.id !== disconnectedPlayerId));
     });
+
     return () => {
       if (roomId) {
         socket.emit("leave_room", { roomId, userName });
@@ -85,7 +98,7 @@ function MultiplayerGame() {
 
   const startGame = () => {
     if (userId === hostId) {
-      socket.emit("start_game", roomId);
+      socket.emit("start_game", { roomId, difficulties }); // ✅ Send difficulty to server
       setGameStarted(true);
       startNewGame();
     }
@@ -93,14 +106,20 @@ function MultiplayerGame() {
 
   const startNewGame = () => {
     if (allCards.length > 0) {
-      setCards(generateCards(allCards, "easy")); // Default difficulty
-      setTimeLeft(40);
-      timeLeftRef.current = 40;
+      setFinish(false); // Reset finish state
+      setAllFinished(false);
     }
+  };
+
+  const handleGameFinish = (moves, timeLeft) => {
+    setFinish(true);
+    // ✅ Send both moves and timeLeft to the server
+    socket.emit("player_finished", { roomId, userName, moves, timeLeft });
   };
 
   return (
     <div>
+      <button onClick={() => navigate("/")}>Back to Home</button>
       <h2>Multiplayer Mode</h2>
       {!isInRoom ? (
         <>
@@ -124,17 +143,40 @@ function MultiplayerGame() {
           </ul>
         </div>
       )}
-      {userId === hostId && !gameStarted && (
-        <button onClick={startGame}>Start Game</button>
-      )}
-      {gameStarted && (
+      {userId === hostId && !gameStarted && isInRoom && (
         <div>
-          <Timer
-            timeLeft={timeLeft}
-            onTimeUpdate={(t) => (timeLeftRef.current = t)}
+          <Difficulties
+            difficulties={difficulties}
+            handleDifficultyChange={(event) =>
+              setDifficulties(event.target.value)
+            }
+            isStart={gameStarted}
           />
-          <CardGrid cards={cards} />
+          <button onClick={startGame}>Start Game</button>
         </div>
+      )}
+
+      {finish ? (
+        !allFinished ? (
+          <div className="waitingScreen">
+            <h2>Waiting for other players to finish...</h2>
+          </div>
+        ) : (
+          <>
+            <RankingBoard userName={userName} rankings={rankings} />
+          </>
+        )
+      ) : (
+        <GameContent
+          userName={userName}
+          isStart={gameStarted}
+          setStart={setGameStarted}
+          finish={finish}
+          setFinish={handleGameFinish} // ✅ Pass finish handler
+          difficulties={difficulties}
+          setDifficulties={setDifficulties}
+          updateHistory={setHistory} // ✅ Track moves in history
+        />
       )}
     </div>
   );

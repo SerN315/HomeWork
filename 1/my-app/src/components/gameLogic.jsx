@@ -10,6 +10,8 @@ import CardGrid from "../components/cardGrid";
 import { io } from "socket.io-client";
 import { fetchCardsFromDB } from "../features/pullCards";
 import { formatTime } from "../utils/formattime";
+import { useLocation } from "react-router-dom";
+
 const socket = io("http://localhost:3001");
 
 const difficultiesSetting = {
@@ -44,6 +46,7 @@ function GameContent({
   updateHistory,
 }) {
   const [moves, setMoves] = useState(0);
+  const location = useLocation();
   const [timeLeft, setTimeLeft] = useState(
     difficultiesSetting[difficulties].time
   );
@@ -59,7 +62,7 @@ function GameContent({
   };
 
   useEffect(() => {
-    if (userName) {
+    if (location.pathname === "/solomode" && userName) {
       socket.emit("load_history", userName);
 
       socket.on("game_history", (history) => {
@@ -71,7 +74,7 @@ function GameContent({
         socket.off("game_history");
       };
     }
-  }, [userName]);
+  }, [location.pathname, userName]);
 
   useEffect(() => {
     const loadCards = async () => {
@@ -104,12 +107,15 @@ function GameContent({
     setStart(false);
     setTimeLeft(0);
 
-    const newHistory = { moves, time: 0, stat: "Lost" };
+    const finalMoves = movesRef.current; // ✅ Ensure latest move count
+    console.log("Final Moves on Timeout:", finalMoves);
+
+    const newHistory = { moves: finalMoves, time: 0, stat: "Lost" };
     updateHistory((prevHistory) => [...prevHistory, newHistory]);
 
     const gameData = {
       userName,
-      moves,
+      moves: finalMoves, // ✅ Correct move count
       time: 0,
       stat: "Lost",
     };
@@ -128,7 +134,6 @@ function GameContent({
     console.log("Game Completed!");
     setFinish(true);
     setStart(false);
-
     console.log("Final Time Left:", timeLeftRef.current);
 
     updateHistory((prevHistory) => [
@@ -161,10 +166,6 @@ function GameContent({
     setStart(false);
     setFinish(false);
   }, []);
-
-  const handleDifficultyChange = (event) => {
-    setDifficulties(event.target.value);
-  };
 
   return (
     <>

@@ -29,120 +29,149 @@ const rooms = {}; // Ensures rooms is always an object
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
- // Save game history in Firebase
- socket.on("save_game", async (data) => {
-  try {
-    const { userName, moves, time, stat } = data;
-    await db.collection("gameHistory").add({
+  // Save game history in Firebase
+  socket.on("save_game", async (data) => {
+    try {
+      const { userName, moves, time, stat } = data;
+      await db.collection("gameHistory").add({
+        userName,
+        moves,
+        time,
+        stat,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log("Game history saved:", data);
+    } catch (error) {
+      console.error("Error saving game history:", error);
+    }
+  });
+
+  // Create or Join a Room
+  socket.on("join_room", ({ roomId, userName }) => {
+    if (!rooms[roomId]) {
+      rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id };
+    }
+
+    rooms[roomId].players.push({
+      id: socket.id,
       userName,
-      moves,
-      time,
-      stat,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      time: null,
+      moves: null,
+      time: null,
+      stat: "Playing",
     });
 
-    console.log("Game history saved:", data);
-  } catch (error) {
-    console.error("Error saving game history:", error);
-  }
-});
+    socket.join(roomId);
+    socket.emit("user_data", { userId: socket.id });
 
-// Create or Join a Room
-socket.on("join_room", ({ roomId, userName }) => {
-  if (!rooms[roomId]) {
-    rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id };
-  }
-
-  rooms[roomId].players.push({
-    id: socket.id,
-    userName,
-    finishTime: null,
-    moves: null,
-    time: null,
-    stat: "Playing",
+    io.to(roomId).emit("room_update", {
+      players: rooms[roomId].players,
+      hostId: rooms[roomId].hostId,
+    });
   });
 
-  socket.join(roomId);
-  socket.emit("user_data", { userId: socket.id });
-
-  io.to(roomId).emit("room_update", {
-    players: rooms[roomId].players,
-    hostId: rooms[roomId].hostId,
-  });
-});
-
-// Start Game (Only Host Can Start)
-socket.on("start_game", (roomId) => {
-  if (rooms[roomId] && rooms[roomId].hostId === socket.id) {
-    rooms[roomId].gameStarted = true;
-    io.to(roomId).emit("game_started");
-  }
-});
-
-// Player Finishes the Game
-socket.on("player_finished", ({ roomId, userName, finishTime, moves, time }) => {
-  const room = rooms[roomId];
-  if (!room) return;
-  console.log(`${userName} finished the game in ${time}ms`);
-
-  // Update the player's finish time and stats
-  const player = room.players.find((p) => p.userName === userName);
-  if (player) {
-    player.finishTime = finishTime;
-    player.moves = moves;
-    player.time = time;
-    player.stat = "Completed";
-  }
-
-  // Rank players based on finish time
-  const rankings = [...room.players]
-    .filter((p) => p.finishTime !== null) // Only include finished players
-    .sort((a, b) => a.finishTime - b.finishTime);
-
-  io.to(roomId).emit("update_rankings", rankings);
-
-  // If all players are done, send the final ranking
-  if (room.players.every((p) => p.finishTime !== null)) {
-    io.to(roomId).emit("game_over", rankings);
-  }
-});
-
-// Fetch Game History
-socket.on("load_history", async (userName) => {
-  try {
-    const history = await fetchGameHistory(userName);
-    socket.emit("game_history", history);
-  } catch (error) {
-    console.error("Error loading game history:", error);
-  }
-});
-
-// Leave Room
-socket.on("leave_room", ({ roomId, userName }) => {
-  if (!rooms[roomId]) return;
-
-  const room = rooms[roomId];
-  room.players = room.players.filter((p) => p.id !== socket.id);
-
-  // Assign a new host if the host leaves
-  if (room.hostId === socket.id && room.players.length > 0) {
-    room.hostId = room.players[0].id;
-    io.to(roomId).emit("new_host", room.players[0].userName);
-  }
-
-  // Notify remaining players
-  io.to(roomId).emit("room_update", {
-    players: room.players,
-    hostId: room.hostId,
+  socket.on("start_game", ({ roomId, difficulties }) => {
+    if (rooms[roomId] && rooms[roomId].hostId === socket.id) {
+      rooms[roomId].gameStarted = true;
+      rooms[roomId].difficulties = difficulties; // ✅ Store difficulty
+      io.to(roomId).emit("game_started", difficulties); // ✅ Send difficulty to all
+    }
   });
 
-  // Delete room if empty
-  if (room.players.length === 0) {
-    delete rooms[roomId];
-  }
+  socket.on("player_finished", async ({ roomId, userName, time, moves }) => {
+    const room = rooms[roomId];
+    if (!room) return;
 
-  console.log(`${userName} left room ${roomId}`);
-});
+    console.log(`📩 ${userName} finished the game with ${time} seconds`);
+    if (time === undefined) {
+      time = 0;
+    }
+    if (moves === undefined) moves = Number.MAX_SAFE_INTEGER; // Huge number means worst moves (for lost players)
+
+    // ✅ Fetch latest history entry from Firebase
+    const playerHistory = await fetchGameHistory(userName);
+    let latestHistoryEntry = { time, moves, stat: "Completed" };
+
+    if (playerHistory.length > 0) {
+      latestHistoryEntry = playerHistory[0]; // ✅ Get most recent entry
+    }
+
+    // ✅ Update the player's status
+    const player = room.players.find((p) => p.userName === userName);
+    if (player) {
+      player.time = latestHistoryEntry.time;
+      player.moves = latestHistoryEntry.moves;
+      player.stat = player.time === 0 ? "Lost" : "Completed"; // ✅ Mark as "Lost" if time is 0
+    }
+
+    // ✅ Only rank players who have completed
+    const finishedPlayers = room.players.filter(
+      (p) => p.stat === "Completed" || p.stat === "Lost"
+    );
+    const rankedPlayers = finishedPlayers
+      .map((p) => ({
+        userName: p.userName,
+        time: p.time,
+        moves: p.moves,
+        stat: p.stat,
+      }))
+      .sort((a, b) => b.time - a.time || b.moves - a.moves); // ✅ Rank by time first, then moves
+
+    console.log("🏆 Updated Rankings:", rankedPlayers);
+    io.to(roomId).emit("update_rankings", rankedPlayers);
+
+    // ✅ Check if ALL players have finished
+    if (finishedPlayers.length === room.players.length) {
+      console.log("🎮 All players finished! Sending final rankings...");
+      io.to(roomId).emit("game_over", rankedPlayers);
+
+      // ✅ Reset room state so it can be reused
+      rooms[roomId].gameStarted = false;
+      rooms[roomId].players.forEach((p) => {
+        p.time = null;
+        p.moves = null;
+        p.stat = "Playing";
+      });
+    }
+  });
+
+  // Fetch Game History
+  socket.on("load_history", async (userName) => {
+    try {
+      const history = await fetchGameHistory(userName);
+      socket.emit("game_history", history);
+    } catch (error) {
+      console.error("Error loading game history:", error);
+    }
+  });
+
+  // Leave Room
+  socket.on("leave_room", ({ roomId, userName }) => {
+    if (!rooms[roomId]) return;
+
+    const room = rooms[roomId];
+    room.players = room.players.filter((p) => p.id !== socket.id);
+
+    // Assign a new host if the host leaves
+    if (room.hostId === socket.id && room.players.length > 0) {
+      room.hostId = room.players[0].id;
+      io.to(roomId).emit("new_host", room.players[0].userName);
+    }
+
+    // Notify remaining players
+    io.to(roomId).emit("room_update", {
+      players: room.players,
+      hostId: room.hostId,
+    });
+
+    // Delete room if empty
+    if (room.players.length === 0) {
+      delete rooms[roomId];
+    }
+
+    console.log(`${userName} left room ${roomId}`);
+  });
 
   // Handle Disconnection
   socket.on("disconnect", () => {

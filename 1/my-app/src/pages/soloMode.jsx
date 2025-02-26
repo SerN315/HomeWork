@@ -17,7 +17,6 @@ function SoloMode() {
   const [difficulties, setDifficulties] = useState("easy");
   const [isStart, setStart] = useState(false);
   const [finish, setFinish] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
 
   const handleUserNameSubmit = (e) => {
     e.preventDefault();
@@ -27,13 +26,13 @@ function SoloMode() {
     }
   };
 
-  const updateHistory = (newHistory) => {
-    setHistory((prevHistory) => [...prevHistory, newHistory]);
-  };
+  // const updateHistory = (newHistory) => {
+  //   setHistory((prevHistory) => [...prevHistory, newHistory]);
+  // };
 
-  const updateTimeLeft = (newTime) => {
-    setTimeLeft(newTime);
-  };
+  // const updateTimeLeft = (newTime) => {
+  //   setTimeLeft(newTime);
+  // };
 
   return (
     <div className="game">
@@ -95,7 +94,7 @@ function SoloMode() {
         setFinish={setFinish}
         difficulties={difficulties}
         setDifficulties={setDifficulties}
-        updateHistory={setHistory} // ✅ Pass setHistory function
+        updateHistory={setHistory}
       />
 
       <GameHistory
