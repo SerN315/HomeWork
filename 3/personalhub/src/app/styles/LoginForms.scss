@@ -1,0 +1,55 @@
+@mixin forms {
+  width: 50%;
+  flex-direction: column;
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  padding-left: clamp(10px, 5vw, 100px);
+  border-radius: 10px;
+  height: 100%;
+}
+.login-form {
+  @include forms;
+}
+.register-form {
+  @include forms;
+}
+form {
+  width: 80%;
+  .subInteraction {
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+}
+.formName {
+  font-size: 2rem;
+  position: relative;
+  top: -100px;
+  font-weight: bolder;
+}
+.titleDescription {
+  .title {
+    font-size: 3rem;
+    font-weight: bolder;
+  }
+  .subtitle {
+    font-size: 1.5rem;
+  }
+}
+button {
+  width: 100px;
+  height: 40px;
+  border-radius: 5px;
+  background-color: rgb(100, 34, 207);
+  color: white;
+}
+
+.register {
+  display: flex;
+  .registerLink {
+    margin-left: 5px;
+    text-decoration: underline;
+  }
+}

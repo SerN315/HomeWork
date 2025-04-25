@@ -84,31 +84,36 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     console.log(`📩 ${userName} finished the game with ${time} seconds`);
-    if (time === undefined) {
-      time = 0;
-    }
-    if (moves === undefined) moves = Number.MAX_SAFE_INTEGER; // Huge number means worst moves (for lost players)
+
+    if (time === undefined) time = 0; // Default to 0 if undefined
+    if (moves === undefined) moves = Number.MAX_SAFE_INTEGER; // Default worst case for lost players
+
+    // ✅ Prioritize current game data
+    let latestHistoryEntry = {
+      time,
+      moves,
+      stat: time === 0 ? "Lost" : "Completed",
+    };
 
     // ✅ Fetch latest history entry from Firebase
     const playerHistory = await fetchGameHistory(userName);
-    let latestHistoryEntry = { time, moves, stat: "Completed" };
-
-    if (playerHistory.length > 0) {
+    if (playerHistory.length > 0 && playerHistory[0].time !== undefined) {
       latestHistoryEntry = playerHistory[0]; // ✅ Get most recent entry
     }
 
-    // ✅ Update the player's status
+    // ✅ Update the player's status with correct data
     const player = room.players.find((p) => p.userName === userName);
     if (player) {
-      player.time = latestHistoryEntry.time;
-      player.moves = latestHistoryEntry.moves;
-      player.stat = player.time === 0 ? "Lost" : "Completed"; // ✅ Mark as "Lost" if time is 0
+      player.time = time; // Use the current game time
+      player.moves = moves; // Use the current game moves
+      player.stat = time === 0 ? "Lost" : "Completed"; // Mark lost if time is 0
     }
 
     // ✅ Only rank players who have completed
     const finishedPlayers = room.players.filter(
       (p) => p.stat === "Completed" || p.stat === "Lost"
     );
+
     const rankedPlayers = finishedPlayers
       .map((p) => ({
         userName: p.userName,
@@ -116,7 +121,10 @@ io.on("connection", (socket) => {
         moves: p.moves,
         stat: p.stat,
       }))
-      .sort((a, b) => b.time - a.time || b.moves - a.moves); // ✅ Rank by time first, then moves
+      .sort((a, b) => {
+        if (a.time === 0 && b.time === 0) return a.moves - b.moves; // ✅ Sort "Lost" players by moves
+        return a.time - b.time || a.moves - b.moves; // ✅ Otherwise, rank by time then moves
+      });
 
     console.log("🏆 Updated Rankings:", rankedPlayers);
     io.to(roomId).emit("update_rankings", rankedPlayers);

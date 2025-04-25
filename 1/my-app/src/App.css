@@ -206,3 +206,9 @@
   min-height: 70px;
   font-size: 30px;
 }
+
+@media (max-width: 425px) {
+  .start-btn {
+    width: 100%;
+  }
+}
