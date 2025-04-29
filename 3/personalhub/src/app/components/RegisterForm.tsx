@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import LoginInput from "@/app/components/loginInput";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/app/firebase/firebaseConfig";
 
 const RegisterForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -12,11 +14,13 @@ const RegisterForm: React.FC = () => {
     password?: string;
     confirmpassword?: string;
     notempty?: string;
+    general?: string;
   }>({
     email: undefined,
     password: undefined,
     confirmpassword: undefined,
     notempty: undefined,
+    general: undefined,
   });
 
   const validateFields = () => {
@@ -27,53 +31,73 @@ const RegisterForm: React.FC = () => {
       notempty?: string;
     } = {};
 
-    // Validate password
     if (password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    // Validate confirm password
     if (confirmpassword !== password) {
       newErrors.confirmpassword = "Passwords do not match";
     }
 
-    // Validate username
     if (userName.trim().length < 1) {
       newErrors.notempty = "Username cannot be empty";
     }
 
-    // Update all errors at once
     setErrors(newErrors);
 
-    // Return true if no errors
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (validateFields()) {
-      console.log("Registering in with:", email, password);
+      try {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        console.log("User registered:", userCredential.user);
+        // Perform further actions, such as saving the username or redirecting
+      } catch (error: any) {
+        console.error("Registration error:", error.message);
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          general: "Failed to register. Please try again.",
+        }));
+      }
+    }
+  };
+  const changeToLogin = () => {
+    const formElement = document.getElementsByClassName("login-form");
+    const registerElement = document.getElementsByClassName("register-form");
+    if (formElement && registerElement) {
+      formElement[0].classList.remove("hidden");
+      registerElement[0].classList.remove("show");
     }
   };
 
   return (
     <div className="register-form">
-      <h1>Register</h1>
-      <form onSubmit={handleSubmit}>
+      <h1 className="formName">Create your account</h1>
+      <form onSubmit={handleSubmit} id="register-form">
+        <p>Username</p>
         <LoginInput
           value={userName}
           label="Username"
           onChange={(e) => setUserName(e.target.value)}
           error={errors.notempty}
         />
+        <p>Email</p>
         <LoginInput
           type="email"
           value={email}
           label="Email"
           onChange={(e) => setEmail(e.target.value)}
-          //   error={errors.email}
+          error={errors.email}
         />
+        <p>Password</p>
         <LoginInput
           type="password"
           label="Password"
@@ -81,6 +105,7 @@ const RegisterForm: React.FC = () => {
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
         />
+        <p>Confirm Password</p>
         <LoginInput
           type="password"
           label="Confirm Password"
@@ -88,8 +113,17 @@ const RegisterForm: React.FC = () => {
           onChange={(e) => setConfirmPassword(e.target.value)}
           error={errors.confirmpassword}
         />
-        <button type="submit">Register</button>
+        {errors.general && <p className="error">{errors.general}</p>}
       </form>
+      <button type="submit" form="register-form">
+        Register
+      </button>
+      <div className="register">
+        <p>Already have an account</p>
+        <a href="#" className="registerLink" onClick={changeToLogin}>
+          Login
+        </a>
+      </div>
     </div>
   );
 };

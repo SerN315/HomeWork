@@ -1,12 +1,20 @@
+@import "../styles//styles.scss";
 @mixin forms {
   width: 50%;
   flex-direction: column;
   display: flex;
   justify-content: center;
-  gap: 60px;
-  padding-left: clamp(10px, 5vw, 100px);
+  gap: 50px;
+  padding-left: 80px;
   border-radius: 10px;
   height: 100%;
+  @include respond-to(md) {
+    padding-left: 40px;
+  }
+  @include respond-to(sm) {
+    padding-left: 20px;
+    width: 100%;
+  }
 }
 .login-form {
   @include forms;
@@ -16,17 +24,34 @@
 }
 form {
   width: 80%;
+  @include respond-to(md) {
+    width: 95%;
+  }
   .subInteraction {
     margin-top: 10px;
     width: 100%;
     display: flex;
     justify-content: space-between;
+    .rememberMe {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      input {
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+        border-radius: 20px;
+      }
+      label {
+        font-size: 0.9rem;
+      }
+    }
   }
 }
 .formName {
   font-size: 2rem;
   position: relative;
-  top: -100px;
+  top: -10px;
   font-weight: bolder;
 }
 .titleDescription {
@@ -34,16 +59,20 @@ form {
     font-size: 3rem;
     font-weight: bolder;
   }
-  .subtitle {
-    font-size: 1.5rem;
+  .subTitle {
+    font-size: 1rem;
+    color: grey;
   }
 }
 button {
-  width: 100px;
-  height: 40px;
+  width: 80%;
+  height: 50px;
   border-radius: 5px;
   background-color: rgb(100, 34, 207);
   color: white;
+  @include respond-to(md) {
+    width: 95%;
+  }
 }
 
 .register {
@@ -51,5 +80,30 @@ button {
   .registerLink {
     margin-left: 5px;
     text-decoration: underline;
+  }
+}
+.error {
+  font-size: 0.9rem;
+  color: red;
+}
+
+.interactionButton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  button {
+    &:hover {
+      background-color: rgb(80, 28, 166);
+      color: white;
+    }
+  }
+  .google-login {
+    color: black;
+    background-color: white;
+    border: 1px solid rgba(66, 66, 66, 0.445);
+    &:hover {
+      background-color: rgb(189, 189, 189);
+      color: black;
+    }
   }
 }

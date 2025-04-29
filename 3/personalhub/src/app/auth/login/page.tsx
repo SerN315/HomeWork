@@ -1,23 +1,15 @@
 import React from "react";
-import dynamic from "next/dynamic";
-import LoginForm from "./LoginForm";
-import RegisterForm from "./RegisterForm";
-import "../../styles/LoginForms.scss";
-import "../../styles/Login.scss";
-import Image from "next/image";
+import "@/app/styles/LoginForms.scss";
+import "@/app/styles/Login.scss";
+import LoginInternal from "./LoginInternal";
 
 const LoginPage: React.FC = () => {
   return (
     <div className="login-page">
-      <LoginForm />
-      <RegisterForm />
-      <div className="decorImage">
-        <Image
-          alt="The Storm"
-          src="/604723-DmC-Devil-May-Cry-Vergil-4K.jpg"
-          layout="fill"
-          objectFit="cover"
-        ></Image>
+      <div className="login-page-container">
+        <div className="login-page-content">
+          <LoginInternal />
+        </div>
       </div>
     </div>
   );
