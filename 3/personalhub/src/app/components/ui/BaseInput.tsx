@@ -1,5 +1,5 @@
 import React, { FC, InputHTMLAttributes } from "react";
-import "../styles/BaseInput.scss";
+import "@/app/styles/ui/BaseInput.scss";
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;

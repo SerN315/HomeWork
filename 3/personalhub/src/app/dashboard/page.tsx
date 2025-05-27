@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useState } from "react";
-import WidgetWrapper from "../components/widgetWrappet";
+import WidgetWrapper from "@/app/components/ultis/widgetWrappet";
 import GridLayout from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";

@@ -61,14 +61,14 @@ form {
   }
   .subTitle {
     font-size: 1rem;
-    color: grey;
+    color: $gray-500;
   }
 }
 button {
   width: 80%;
   height: 50px;
   border-radius: 5px;
-  background-color: rgb(100, 34, 207);
+  background-color: $gradient-primary;
   color: white;
   @include respond-to(md) {
     width: 95%;
@@ -84,7 +84,7 @@ button {
 }
 .error {
   font-size: 0.9rem;
-  color: red;
+  color: $error-color;
 }
 
 .interactionButton {
@@ -93,16 +93,16 @@ button {
   gap: 10px;
   button {
     &:hover {
-      background-color: rgb(80, 28, 166);
+      background-color: $gradient-primary;
       color: white;
     }
   }
   .google-login {
-    color: black;
+    color: $gray-800;
     background-color: white;
-    border: 1px solid rgba(66, 66, 66, 0.445);
+    border: 1px solid $gray-400;
     &:hover {
-      background-color: rgb(189, 189, 189);
+      background-color: $gray-500;
       color: black;
     }
   }

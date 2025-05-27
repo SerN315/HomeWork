@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Minus } from "lucide-react";
-import "../styles/widgetWrapper.scss";
+import "@/app/styles/ultis/widgetWrapper.scss";
 
 type WidgetWrapperProps = {
   title: string;

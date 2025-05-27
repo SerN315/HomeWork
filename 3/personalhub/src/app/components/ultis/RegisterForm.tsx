@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import LoginInput from "@/app/components/loginInput";
+import LoginInput from "@/app/components/ui/loginInput";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/app/firebase/firebaseConfig";
 

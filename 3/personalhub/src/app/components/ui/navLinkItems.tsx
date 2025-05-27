@@ -1,26 +1,25 @@
 import React from "react";
 import Link from "next/link";
+import "@/app/styles/ui/NavLinkItem.scss"
 
 interface NavLinkItemProps {
   label: string;
   href: string;
   isActive?: boolean;
+  id?: string;
 }
 
 const NavLinkItem: React.FC<NavLinkItemProps> = ({
   label,
   href,
+  id,
   isActive = false,
 }) => {
   return (
-    <li className="nav-item">
+    <li className="nav-item" id={id}>
       <Link
         href={href}
         className={`nav-link ${isActive ? "active" : ""}`}
-        style={{
-          textDecoration: isActive ? "underline" : "none",
-          color: isActive ? "blue" : "black",
-        }}
       >
         {label}
       </Link>
