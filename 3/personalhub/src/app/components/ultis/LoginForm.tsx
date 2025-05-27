@@ -118,8 +118,8 @@ const LoginForm: React.FC = () => {
           </a>
         </div>
       </form>
-      <div className="interactionButton">
-        <button type="submit" form="login-form">
+      <div className="submitButtons">
+        <button type="submit" form="login-form" className="submitButton">
           Login
         </button>
         <button

@@ -1,6 +1,6 @@
 import React from "react";
-import "@/app/styles/LoginForms.scss";
-import "@/app/styles/Login.scss";
+import "@/app/styles/ultis/LoginForms.scss";
+import "@/app/styles/pages/Login.scss";
 import LoginInternal from "./LoginInternal";
 
 const LoginPage: React.FC = () => {

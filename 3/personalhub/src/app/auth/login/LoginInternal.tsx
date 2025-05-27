@@ -1,9 +1,9 @@
 import React from "react";
 import dynamic from "next/dynamic";
-import LoginForm from "@/app/components/LoginForm";
-import RegisterForm from "@/app/components/RegisterForm";
-import "@/app/styles/LoginForms.scss";
-import "@/app/styles/Login.scss";
+import LoginForm from "@/app/components/ultis/LoginForm";
+import RegisterForm from "@/app/components/ultis/RegisterForm";
+import "@/app/styles/ultis/LoginForms.scss";
+import "@/app/styles/pages/Login.scss";
 import Image from "next/image";
 
 const LoginInternal: React.FC = () => {

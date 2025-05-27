@@ -1,4 +1,4 @@
-@import "../styles//styles.scss";
+@import "../styles.scss";
 @mixin forms {
   width: 50%;
   flex-direction: column;
@@ -87,13 +87,14 @@ button {
   color: $error-color;
 }
 
-.interactionButton {
+.submitButtons {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  button {
+  .submitButton {
+    background-color: $primary-color;
     &:hover {
-      background-color: $gradient-primary;
+      background: $gradient-primary;
       color: white;
     }
   }
