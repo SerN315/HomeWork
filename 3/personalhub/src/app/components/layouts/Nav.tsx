@@ -98,6 +98,9 @@ export const Nav: React.FC = () => {
               iconName="CalendarIcon"
             />
           </ul>
+          <ul className="nav-list_menu">
+            <h1 className="menu-title">DOCUMENTS</h1>
+          </ul>
         </div>
       </div>
       <div className="quickOptions">
