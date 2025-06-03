@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
 import { Nav } from "@/app/components/layouts/Nav";
+import { EditModeProvider } from "@/app/contexts/editWidgetContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="flex min-h-screen">
         <Nav />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+    <EditModeProvider>
+      {children}
+    </EditModeProvider></main>
       </body>
     </html>
   );
