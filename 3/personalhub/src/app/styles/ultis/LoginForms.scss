@@ -1,6 +1,6 @@
 @import "../styles.scss";
 @mixin forms {
-  width: 50%;
+  width: 100%;
   flex-direction: column;
   display: flex;
   justify-content: center;
@@ -8,6 +8,7 @@
   padding-left: 80px;
   border-radius: 10px;
   height: 100%;
+  
   @include respond-to(md) {
     padding-left: 40px;
   }
@@ -17,10 +18,15 @@
   }
 }
 .login-form {
-  @include forms;
+width: 50%;
 }
 .register-form {
+  width: 50%;
+}
+
+.login-form-container, .register-form-container {
   @include forms;
+
 }
 form {
   width: 80%;
@@ -91,13 +97,6 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  .submitButton {
-    background-color: $primary-color;
-    &:hover {
-      background: $gradient-primary;
-      color: white;
-    }
-  }
   .google-login {
     color: $gray-800;
     background-color: white;
@@ -108,3 +107,10 @@ button {
     }
   }
 }
+  .submitButton {
+    background-color: $primary-color;
+    &:hover {
+      background: $gradient-primary;
+      color: white;
+    }
+  }

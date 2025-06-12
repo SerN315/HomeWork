@@ -1,14 +1,13 @@
 "use client";
 import React, { useState } from "react";
 import LoginInput from "@/app/components/ui/loginInput";
-import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-} from "firebase/auth";
-import { auth } from "@/app/firebase/firebaseConfig";
 
-const LoginForm: React.FC = () => {
+
+interface LoginFormProps {
+  toggleForm: () => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{
@@ -44,48 +43,43 @@ const LoginForm: React.FC = () => {
 
     if (validateFields()) {
       try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        console.log("User logged in:", userCredential.user);
-      } catch (error: any) {
-        console.error("Login error:", error.message);
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          general: "Invalid email or password. Please try again.",
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setErrors((prev) => ({
+            ...prev,
+            general: data.error || "Login failed. Please try again.",
+          }));
+          return;
+        }
+
+        console.log("Logged in user:", data.user);
+        window.location.href = "/dashboard"; 
+        localStorage.setItem("access_token", data.access_token);
+
+        // Redirect or trigger login success flow
+      } catch (err) {
+        console.error("Login error:", err);
+        setErrors((prev) => ({
+          ...prev,
+          general: "An unexpected error occurred.",
         }));
       }
     }
   };
 
-  const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      console.log("Google login successful:", result.user);
-    } catch (error: any) {
-      console.error("Google login error:", error.message);
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        general: "Failed to login with Google. Please try again.",
-      }));
-    }
-  };
-
-  const changeToRegister = () => {
-    const formElement = document.getElementsByClassName("login-form");
-    const registerElement = document.getElementsByClassName("register-form");
-    if (formElement && registerElement) {
-      formElement[0].classList.add("hidden");
-      registerElement[0].classList.add("show");
-    }
-  };
 
   return (
-    <div className="login-form">
-      <h1 className="formName">Login</h1>
+    <div className="login-form-container">
+      {/* <h1 className="formName">Login</h1> */}
       <div className="titleDescription">
         <h1 className="title">Welcome Back</h1>
         <h2 className="subTitle">Let's login to begin productive</h2>
@@ -122,17 +116,13 @@ const LoginForm: React.FC = () => {
         <button type="submit" form="login-form" className="submitButton">
           Login
         </button>
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="google-login"
-        >
-          Login with Google
+        <button type="button" className="google-login" disabled>
+          Login with Google (disabled)
         </button>
       </div>
       <div className="register">
         <p>Don't have an account?</p>
-        <a href="#" className="registerLink" onClick={changeToRegister}>
+        <a href="#" className="registerLink" onClick={toggleForm}>
           Register
         </a>
       </div>

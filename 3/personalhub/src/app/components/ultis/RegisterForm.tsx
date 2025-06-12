@@ -1,10 +1,12 @@
 "use client";
 import React, { useState } from "react";
 import LoginInput from "@/app/components/ui/loginInput";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/app/firebase/firebaseConfig";
 
-const RegisterForm: React.FC = () => {
+interface RegisterFormProps {
+  toggleForm: () => void;
+}
+
+const RegisterForm: React.FC<RegisterFormProps> = ({ toggleForm }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmpassword, setConfirmPassword] = useState("");
@@ -49,37 +51,47 @@ const RegisterForm: React.FC = () => {
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    if (validateFields()) {
-      try {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        console.log("User registered:", userCredential.user);
-        // Perform further actions, such as saving the username or redirecting
-      } catch (error: any) {
-        console.error("Registration error:", error.message);
+  if (validateFields()) {
+    try {
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Signup failed:", data.error);
         setErrors((prevErrors) => ({
           ...prevErrors,
-          general: "Failed to register. Please try again.",
+          general: data.error || "Failed to register. Please try again.",
         }));
+        return;
       }
+
+      console.log("User registered:", data.user);
+      window.location.href = "/auth/login";
+      localStorage.setItem("access_token", data.access_token);
+
+      // TODO: Redirect or show success
+    } catch (error) {
+      console.error("Registration error:", error);
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        general: "An unexpected error occurred during registration.",
+      }));
     }
-  };
-  const changeToLogin = () => {
-    const formElement = document.getElementsByClassName("login-form");
-    const registerElement = document.getElementsByClassName("register-form");
-    if (formElement && registerElement) {
-      formElement[0].classList.remove("hidden");
-      registerElement[0].classList.remove("show");
-    }
-  };
+  }
+};
+
 
   return (
-    <div className="register-form">
+    <div className="register-form-container">
       <h1 className="formName">Create your account</h1>
       <form onSubmit={handleSubmit} id="register-form">
         <p>Username</p>
@@ -115,12 +127,12 @@ const RegisterForm: React.FC = () => {
         />
         {errors.general && <p className="error">{errors.general}</p>}
       </form>
-      <button type="submit" form="register-form">
+      <button className="submitButton" type="submit" form="register-form">
         Register
       </button>
       <div className="register">
         <p>Already have an account</p>
-        <a href="#" className="registerLink" onClick={changeToLogin}>
+        <a href="#" className="registerLink" onClick={toggleForm}>
           Login
         </a>
       </div>

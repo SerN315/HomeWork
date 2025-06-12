@@ -1,16 +1,31 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import BaseWidget from "./BaseWidget";
 import "../../styles/widgets/AnalogClock.scss"; 
 import WidgetProps from "@/app/types/widget";
 
 const AnalogClock: React.FC<{ paused?: boolean }> = ({ paused }) => {
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true); 
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (paused) return;
+
+    // Initialize time immediately on client mount
+    setTime(new Date());
+
     const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
-  }, [paused]);
+  }, [paused, mounted]);
+
+  if (!mounted || time === null) {
+    // Render fallback/empty or loading on server and before mount
+    return <div className="clock-container">Loading...</div>;
+  }
 
   const hour = (time.getHours() % 12) + time.getMinutes() / 60;
   const minute = time.getMinutes() + time.getSeconds() / 60;
