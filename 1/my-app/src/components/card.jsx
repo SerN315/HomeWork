@@ -1,10 +1,18 @@
-import { useState } from "react";
-import "../App.css";
+import React, { useState } from "react";
 
-function Card({ id, imgurl, choosen, handleCardClick }) {
+const Card = React.memo(({ id, imgurl, value, isMatched, handleCardClick }) => {
+  const [isFlipped, setFlipped] = useState(false);
+
+  const flipCard = (state) => {
+    setFlipped(state);
+  };
+
   return (
-    <div className="card-container" onClick={() => handleCardClick(id)}>
-      <div className={`card ${choosen ? "flipped" : ""}`}>
+    <div
+      className="card-container"
+      onClick={() => !isFlipped && !isMatched && handleCardClick(id, value, flipCard)}
+    >
+      <div className={`card ${isFlipped || isMatched ? "flipped" : ""}`}>
         <div className="side card_front"></div>
         <div
           className="side card_back"
@@ -13,6 +21,6 @@ function Card({ id, imgurl, choosen, handleCardClick }) {
       </div>
     </div>
   );
-}
+});
 
 export default Card;

@@ -37,8 +37,25 @@ const io = new Server(server, {
   },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   console.log(`User Connected: ${socket.id}`);
+
+  socket.on("recent_rooms", async (recentRooms) => {
+    if (!recentRooms || recentRooms.length === 0) return; // Don't proceed if no rooms are provided
+
+    try {
+      const roomsSnapshot = await db.collection("rooms").listDocuments();
+      const allRooms = roomsSnapshot.map((doc) => doc.id);
+
+      // Filter only valid rooms that exist in Firestore
+      const validRooms = recentRooms.filter((room) => allRooms.includes(room));
+
+      console.log("Valid Rooms Fetched:", validRooms); // Debugging log
+      socket.emit("valid_rooms", validRooms);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+    }
+  });
 
   socket.on("join_room", async (room) => {
     socket.join(room);
